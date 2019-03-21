@@ -471,6 +471,16 @@
     };
     version = "0.10.0";
   };
+  redis = {
+    groups = ["default"];
+    platforms = [];
+    source = {
+      remotes = ["https://rubygems.org"];
+      sha256 = "0rk6mmy3y2jd34llrf591ribl1p54ghkw7m96wrbamy8fwva5zqv";
+      type = "gem";
+    };
+    version = "4.1.0";
+  };
   ruby_dep = {
     groups = ["default" "development"];
     platforms = [];

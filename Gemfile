@@ -6,6 +6,7 @@ ruby '~> 2.5.0'
 gem 'rails', '~> 5.2.2', '>= 5.2.2.1'
 gem 'puma', '~> 3.11'
 gem 'jbuilder', '~> 2.5'
+gem 'redis', '~> 4.0'
 gem 'bootsnap', '>= 1.1.0', require: false
 
 group :development do

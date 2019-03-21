@@ -3,17 +3,21 @@
   masterKey ? "b8085db5c6b1fe5cb794bc199c7a4313",
   developmentSecret ? "0d996176af46ffd1894d328d703f2b37",
   fetchFromGitHub ? (import <nixpkgs> { }).fetchFromGitHub,
+  writeText ? (import <nixpkgs> { }).writeText,
+  actionCable ? { adapter = "redis"; url = "redis://localhost:6379/0"; channel_prefix = "${name}-cable"; },
   ...
 }:
 
 let
-  pkgs = fetchFromGitHub {
+  pkgsSource = fetchFromGitHub {
     owner = "NixOS";
     repo = "nixpkgs";
     rev = "9b3e5a3aab728e7cea2da12b6db300136604be3a";
     sha256 = "17hxhyqzzlqcpd4mksnxcbq233s8q8ldxnp7n0g21v1dxy56wfhk";
   };
-in with import pkgs { }; let
+  pkgs = import pkgsSource { };
+  functions = import ./functions.nix { nixpkgs = pkgs; };
+in with pkgs; let
   ruby = ruby_2_5;
   bundleEnv = bundlerEnv {
     name = "${name}-bundlerEnv";
@@ -25,11 +29,16 @@ in with import pkgs { }; let
   gemHome = "${bundleEnv.outPath}/${bundleEnv.ruby.gemPath}";
   bundleGemfile = "${bundleEnv.confFiles.outPath}/Gemfile";
   bundlePath = gemHome;
-  bundleConfig = ''
+  bundleConfig = writeText "config" ''
     ---
     BUNDLE_GEMFILE: "${bundleGemfile}"
     BUNDLE_PATH: "${bundlePath}"
   '';
+  actionCableConfig = writeText "cable.yml" (functions.toYaml {
+    development = actionCable;
+    test = actionCable;
+    production = actionCable;
+  });
 in stdenv.mkDerivation {
   inherit name;
   meta = {
@@ -62,7 +71,8 @@ in stdenv.mkDerivation {
   '';
   configurePhase = ''
     mkdir -p .bundle
-    echo '${bundleConfig}' > .bundle/config
+    cp -f '${bundleConfig}' .bundle/config
+    cp -f '${actionCableConfig}' config/cable.yml
 
     echo "require 'etc'; ENV['BOOTSNAP_CACHE_DIR'] = \"/tmp/rails-bootsnap-cache-#{Etc.getlogin}-$(basename $out)\"" | cat - config/boot.rb > temp && mv temp config/boot.rb
 
@@ -70,7 +80,7 @@ in stdenv.mkDerivation {
     printf "${masterKey}" > config/master.key
   '';
   buildPhase = ''
-    BUNDLE_GEMFILE=${bundleGemfile} BUNDLE_PATH=${bundlePath} bin/rails assets:precompile
+    BUNDLE_GEMFILE=${bundleGemfile} BUNDLE_PATH=${bundlePath} RAILS_ENV=production bin/rails assets:precompile
   '';
   installPhase = ''
     mkdir -p $out
