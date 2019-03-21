@@ -1,3 +1,5 @@
 Rails.application.routes.draw do
-  root 'welcome#index'
+  mount ActionCable.server => '/cable'
+  root controller: :welcome, action: :index
+  resource :hello, only: [:create]
 end
