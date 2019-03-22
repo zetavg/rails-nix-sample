@@ -2,9 +2,17 @@
 
 This is a sample Rails application packaged with [Nix, The Purely Functional Package Manager](https://nixos.org/nix/).
 
+## Development
+
+You can enter the development environment by either running `nix-shell` at the project root (where there's the `default.nix`), or with [direnv](https://direnv.net/) installed then just `cd` into the project.
+
+### Update Dependencies
+
+If you add or removed some dependency, say after editing `Gemfile`, run `bin/update-dependencies` to get them updated.
+
 ## Install in Nix Environment
 
-To install the application to your Nix Environment, `cd` into the project directory then run:
+To install the application into your Nix Environment, `cd` into the project directory then run:
 
 ```bash
 nix-env --install -f default.nix
