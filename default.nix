@@ -1,10 +1,11 @@
 {
-  name ? "SampleRailsApp",
+  name ? "sample-rails-app",
   masterKey ? "b8085db5c6b1fe5cb794bc199c7a4313",
   developmentSecret ? "0d996176af46ffd1894d328d703f2b37",
   fetchFromGitHub ? (import <nixpkgs> { }).fetchFromGitHub,
   writeText ? (import <nixpkgs> { }).writeText,
-  actionCable ? { adapter = "redis"; url = "redis://localhost:6379/0"; channel_prefix = "${name}-cable"; },
+  priority ? 100,
+  actionCable ? { adapter = "async"; },
   ...
 }:
 
@@ -42,7 +43,7 @@ in with pkgs; let
 in stdenv.mkDerivation {
   inherit name;
   meta = {
-    priority = 10;
+    inherit priority;
   };
   buildInputs = [
     coreutils
@@ -85,6 +86,9 @@ in stdenv.mkDerivation {
   installPhase = ''
     mkdir -p $out
     cp -r . $out
+    mkdir -p $out/tmp/cache
+    mkdir -p $out/tmp/pids
+    mkdir -p $out/tmp/sockets
   '';
   preFixup = ''
     cd $out
