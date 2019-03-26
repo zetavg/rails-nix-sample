@@ -2,7 +2,7 @@
   name ? "sample-rails-app",
   masterKey ? "b8085db5c6b1fe5cb794bc199c7a4313",
   developmentSecret ? "0d996176af46ffd1894d328d703f2b37",
-  actionCableConfig ? { adapter = "async"; },
+  actionCableConfig ? null,
   packagePriority ? 100,
   nixpkgs ? import ((import <nixpkgs> { }).fetchFromGitHub {
     owner = "NixOS";
@@ -65,6 +65,7 @@ in with lib; stdenv.mkDerivation {
   shellHook = ''
     export BUNDLE_GEMFILE=${bundleGemfile}
     export BUNDLE_PATH=${bundlePath}
+    PATH=${builtins.toString ./bin}:$PATH
   '';
   unpackPhase = ''
     # Copy the source code
