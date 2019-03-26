@@ -1,5 +1,6 @@
 {
   name ? "sample-rails-app",
+  railsEnv ? null,
   masterKey ? "b8085db5c6b1fe5cb794bc199c7a4313",
   developmentSecret ? "0d996176af46ffd1894d328d703f2b37",
   actionCableConfig ? null,
@@ -25,20 +26,30 @@
 
 let
   functions = import ./functions.nix { inherit lib; };
+  inherit (lib) optionalString;
   bundleEnv = bundlerEnv {
     name = "${name}-bundlerEnv";
     inherit ruby;
     gemfile = ./Gemfile;
     lockfile = ./Gemfile.lock;
     gemset = ./gemset.nix;
+    groups = if railsEnv == "production" then
+      [ "default" "production" ]
+    else
+      [ "default" "production" "development" "test" ];
   };
   gemHome = "${bundleEnv.outPath}/${bundleEnv.ruby.gemPath}";
   bundleGemfile = "${bundleEnv.confFiles.outPath}/Gemfile";
   bundlePath = gemHome;
+  bundleWithout = if railsEnv == "production" then
+    "development:test"
+  else
+    "";
   bundleConfig = writeText "config" ''
     ---
     BUNDLE_GEMFILE: "${bundleGemfile}"
     BUNDLE_PATH: "${bundlePath}"
+    BUNDLE_WITHOUT: "${bundleWithout}"
   '';
   actionCableConfigFile = if actionCableConfig != null then
     writeText "cable.yml" (functions.toYaml {
@@ -47,7 +58,7 @@ let
       production = actionCableConfig;
     })
   else null;
-in with lib; stdenv.mkDerivation {
+in stdenv.mkDerivation {
   inherit name;
   meta = {
     priority = packagePriority;
@@ -65,6 +76,7 @@ in with lib; stdenv.mkDerivation {
   shellHook = ''
     export BUNDLE_GEMFILE=${bundleGemfile}
     export BUNDLE_PATH=${bundlePath}
+    export BUNDLE_WITHOUT=${bundleWithout}
     PATH=${builtins.toString ./bin}:$PATH
   '';
   unpackPhase = ''
@@ -88,6 +100,13 @@ in with lib; stdenv.mkDerivation {
     # Let Bootsnap place it's cache dir under /tmp rather then [app-dir]/tmp which
     # will not be writeable
     echo "require 'etc'; ENV['BOOTSNAP_CACHE_DIR'] = \"/tmp/rails-bootsnap-cache-#{Etc.getlogin}-$(basename $out)\"" | cat - config/boot.rb > temp && mv temp config/boot.rb
+    '' + optionalString (railsEnv != null) ''
+        awk -i inplace "NR==1 {print \"ENV['RAILS_ENV'] = '${railsEnv}'\"} NR!=0" "config.ru"
+      cd bin
+      for file in *; do
+        awk -i inplace "NR==1 {print; print \"ENV['RAILS_ENV'] = '${railsEnv}'\"} NR!=1" "$file"
+      done
+      cd -
     '' + optionalString (developmentSecret != null) ''
       printf ${developmentSecret} > tmp/development_secret.txt
     '' + optionalString (masterKey != null) ''
@@ -97,12 +116,15 @@ in with lib; stdenv.mkDerivation {
     '';
   buildPhase = ''
     # Compile static assets
-    BUNDLE_GEMFILE=${bundleGemfile} BUNDLE_PATH=${bundlePath} RAILS_ENV=production bin/rails assets:precompile
+    BUNDLE_GEMFILE=${bundleGemfile} BUNDLE_PATH=${bundlePath} BUNDLE_WITHOUT=${bundleWithout} RAILS_ENV=production bin/rails assets:precompile
   '';
   installPhase = ''
     # Copy all the stuff to the out directory
     mkdir -p $out
-    cp -r . $out
+    rsync -a "." "$out/" \
+      --exclude='/env-vars' \
+      --exclude='/.sandbox.sb' \
+      --exclude='/.gitignore'
     # Pre-create the directories that Rails may attempt to create on every startup
     mkdir -p $out/tmp/cache
     mkdir -p $out/tmp/pids
@@ -111,12 +133,12 @@ in with lib; stdenv.mkDerivation {
   preFixup = ''
     # Explicity set RubyGems and Bundler config in config.ru
     cd $out
-      awk -i inplace "NR==1 {print \"ENV['GEM_HOME'] = '${gemHome}'\"; print \"ENV['BUNDLE_GEMFILE'] = '${bundleGemfile}'\"; print \"ENV['BUNDLE_PATH'] = '${bundlePath}'\"; print \"Gem.clear_paths\"} NR!=0" "config.ru"
+      awk -i inplace "NR==1 {print \"ENV['GEM_HOME'] = '${gemHome}'\"; print \"ENV['BUNDLE_GEMFILE'] = '${bundleGemfile}'\"; print \"ENV['BUNDLE_PATH'] = '${bundlePath}'\"; print \"ENV['BUNDLE_WITHOUT'] = '${bundleWithout}'\"; print \"Gem.clear_paths\"} NR!=0" "config.ru"
     cd -
     # Explicity set RubyGems and Bundler config in every binstub and Ruby scripts
     cd $out/bin
     for file in *; do
-      awk -i inplace "NR==1 {print; print \"ENV['GEM_HOME'] = '${gemHome}'\"; print \"ENV['BUNDLE_GEMFILE'] = '${bundleGemfile}'\"; print \"ENV['BUNDLE_PATH'] = '${bundlePath}'\"; print \"Gem.clear_paths\"} NR!=1" "$file"
+      awk -i inplace "NR==1 {print; print \"ENV['GEM_HOME'] = '${gemHome}'\"; print \"ENV['BUNDLE_GEMFILE'] = '${bundleGemfile}'\"; print \"ENV['BUNDLE_PATH'] = '${bundlePath}'\"; print \"ENV['BUNDLE_WITHOUT'] = '${bundleWithout}'\"; print \"Gem.clear_paths\"} NR!=1" "$file"
     done
     cd -
     # Prefix every executable in bin/ so there're not going to conflict with other packages
@@ -131,4 +153,4 @@ in with lib; stdenv.mkDerivation {
     done
     cd -
   '';
-} // { inherit ruby gemHome bundleGemfile bundlePath; }
+} // { inherit ruby gemHome bundleGemfile bundlePath bundleWithout; }
