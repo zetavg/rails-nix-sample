@@ -1,7 +1,7 @@
-{ nixpkgs, ... }:
+{ lib, ... }:
 
 rec {
-  toYaml = with builtins; with nixpkgs.lib; x: let
+  toYaml = with builtins; with lib; x: let
     type = typeOf x;
     concatLines = foldr (a: b: if b != null then "${a}\n${b}" else a) null;
     splitLines = splitString "\n";
