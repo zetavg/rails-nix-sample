@@ -13,10 +13,11 @@
   stdenv ? nixpkgs.stdenv,
   lib ? nixpkgs.lib,
   writeText ? nixpkgs.writeText,
+  coreutils ? nixpkgs.coreutils,
+  gnused ? nixpkgs.gnused,
+  rsync ? nixpkgs.rsync,
   ruby ? nixpkgs.ruby_2_5,
   bundlerEnv ? nixpkgs.bundlerEnv,
-  coreutils ? nixpkgs.coreutils,
-  rsync ? nixpkgs.rsync,
   bundler ? nixpkgs.bundler,
   bundix ? nixpkgs.bundix,
   ...
@@ -53,6 +54,7 @@ in with lib; stdenv.mkDerivation {
   };
   buildInputs = [
     coreutils
+    gnused
     rsync
     ruby
     bundler
@@ -118,7 +120,12 @@ in with lib; stdenv.mkDerivation {
     cd -
     # Prefix every executable in bin/ so there're not going to conflict with other packages
     cd $out/bin
+    binfiles=(*)
     for file in *; do
+      for binfile in ''${binfiles[@]}; do
+        sed -i "s|bin/update-dependencies|:|g" "$file"
+        sed -i "s|bin/$binfile|bin/${name}-$binfile|g" "$file"
+      done
       mv "$file" "${name}-$file"
     done
     cd -

@@ -1,0 +1,9 @@
+#!/usr/bin/env ruby
+require 'fileutils'
+include FileUtils
+
+APP_ROOT = File.expand_path('..', __dir__)
+
+chdir APP_ROOT do
+  system 'bin/rails console'
+end

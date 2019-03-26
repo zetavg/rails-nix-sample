@@ -18,7 +18,7 @@ To install the application into your Nix Environment, `cd` into the project dire
 nix-env --install -f default.nix
 ```
 
-Afterwards, you can start the application server by running `sample-rails-app-rails server`, or get into the console with `sample-rails-app-rails console`. Other executables such as `sample-rails-app-setup`, `sample-rails-app-update` are available as well (TODO: Patch them to make them work).
+Afterwards, you can start the application server by running `sample-rails-app-rails server`, or get into the console with `sample-rails-app-rails console`. Other executables such as `sample-rails-app-setup` are available as well.
 
 ## Use as a Package
 
