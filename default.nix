@@ -6,10 +6,10 @@
   actionCableConfig ? null,
   packagePriority ? 100,
   nixpkgs ? import ((import <nixpkgs> { }).fetchFromGitHub {
-    owner = "NixOS";
-    repo = "nixpkgs";
-    rev = "9b3e5a3aab728e7cea2da12b6db300136604be3a";
-    sha256 = "17hxhyqzzlqcpd4mksnxcbq233s8q8ldxnp7n0g21v1dxy56wfhk";
+    owner = "zetavg";
+    repo = "nix-packages";
+    rev = "357a51ab14ed1f9fd5f0ff19f1560f4a1f02d5fc";
+    sha256 = "0bhkx9sagwssx9daxnh2bcvjvjqdynvbyfmhnz2pzmxpdylri95q";
   }) { },
   stdenv ? nixpkgs.stdenv,
   lib ? nixpkgs.lib,
@@ -133,12 +133,25 @@ in stdenv.mkDerivation {
   preFixup = ''
     # Explicity set RubyGems and Bundler config in config.ru
     cd $out
-      awk -i inplace "NR==1 {print \"ENV['GEM_HOME'] = '${gemHome}'\"; print \"ENV['BUNDLE_GEMFILE'] = '${bundleGemfile}'\"; print \"ENV['BUNDLE_PATH'] = '${bundlePath}'\"; print \"ENV['BUNDLE_WITHOUT'] = '${bundleWithout}'\"; print \"Gem.clear_paths\"} NR!=0" "config.ru"
+      awk -i inplace "NR==1 {\
+        print \"ENV['GEM_HOME'] = '${gemHome}'\"; \
+        print \"ENV['BUNDLE_GEMFILE'] = '${bundleGemfile}'\"; \
+        print \"ENV['BUNDLE_PATH'] = '${bundlePath}'\"; \
+        print \"ENV['BUNDLE_WITHOUT'] = '${bundleWithout}'\"; \
+        print \"Gem.clear_paths\"\
+      } NR!=0" "config.ru"
     cd -
     # Explicity set RubyGems and Bundler config in every binstub and Ruby scripts
     cd $out/bin
     for file in *; do
-      awk -i inplace "NR==1 {print; print \"ENV['GEM_HOME'] = '${gemHome}'\"; print \"ENV['BUNDLE_GEMFILE'] = '${bundleGemfile}'\"; print \"ENV['BUNDLE_PATH'] = '${bundlePath}'\"; print \"ENV['BUNDLE_WITHOUT'] = '${bundleWithout}'\"; print \"Gem.clear_paths\"} NR!=1" "$file"
+      awk -i inplace "NR==1 {\
+        print; \
+        print \"ENV['GEM_HOME'] = '${gemHome}'\"; \
+        print \"ENV['BUNDLE_GEMFILE'] = '${bundleGemfile}'\"; \
+        print \"ENV['BUNDLE_PATH'] = '${bundlePath}'\"; \
+        print \"ENV['BUNDLE_WITHOUT'] = '${bundleWithout}'\"; \
+        print \"Gem.clear_paths\"\
+      } NR!=1" "$file"
     done
     cd -
     # Prefix every executable in bin/ so there're not going to conflict with other packages
