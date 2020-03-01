@@ -5,7 +5,7 @@
     rev = "70e88a3635bf940089d6c59ad56359067a2ef60c";
   }) { },
 
-  ruby ? pkgs.ruby_2_5,
+  ruby_2_5 ? pkgs.ruby_2_5,
 
   name ? "sample-rails-app",
   railsEnv ? null,
@@ -22,6 +22,7 @@
 }:
 
 buildRailsApp {
+  ruby = ruby_2_5;
   srcs = [
     ./Gemfile
     ./Gemfile.lock
@@ -36,7 +37,6 @@ buildRailsApp {
   lockfile = ./Gemfile.lock;
   gemset = ./gemset.nix;
   inherit
-    ruby
     name
     railsEnv
     masterKey
